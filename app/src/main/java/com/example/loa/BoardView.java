@@ -10,12 +10,18 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.example.loa.Model.Board;
+import com.example.loa.Model.Human;
+import com.example.loa.Model.Player;
+import com.example.loa.Model.Round;
 
 import java.util.Arrays;
 
 public class BoardView extends View implements View.OnTouchListener {
 
     private Board board;
+    private Round round;
+
+    private OnMoveListener moveListener;
 
     private Paint paint;
 
@@ -29,7 +35,6 @@ public class BoardView extends View implements View.OnTouchListener {
 
     private int movedRow = -1;
     private int movedCol = -1;
-
 
 
     public BoardView(Context context) {
@@ -53,6 +58,15 @@ public class BoardView extends View implements View.OnTouchListener {
         setOnTouchListener((OnTouchListener) this);
         //setOnClickListener((OnClickListener) this);
     }
+
+    public interface OnMoveListener {
+        void onMoveMade(boolean isHumanTurn);
+    }
+
+    public void setOnMoveListener(OnMoveListener listener) {
+        this.moveListener = listener;
+    }
+
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -111,9 +125,9 @@ public class BoardView extends View implements View.OnTouchListener {
             canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
         }
 
-        // Draw lighter highlighting for the place the piece moved to
+        // Draw highlighting for the place the piece moved to
         if (movedRow != -1 && movedCol != -1) {
-            int lighterHighlightColor = Color.parseColor("#FFFF00"); // Lighter yellow color for highlighting
+            int lighterHighlightColor = Color.parseColor("#FFFF00"); // yellow color for highlighting
             int highlightLeft = left + movedCol * cellWidth;
             int highlightTop = top + movedRow * cellHeight;
             int highlightRight = highlightLeft + cellWidth;
@@ -226,7 +240,12 @@ public class BoardView extends View implements View.OnTouchListener {
                     // if move is valid updated moved coordinates for highlighting on redraw
                     movedRow = rowUp;
                     movedCol = colUp;
+                    round.SwitchPlayers();
+                    Log.d("turn", round.getCurPlayer().toString());
                     invalidate();
+                    if (moveListener != null) {
+                        moveListener.onMoveMade(round.getCurPlayer() instanceof Human);
+                    }
                 }
             }
         } else {
@@ -262,5 +281,9 @@ public class BoardView extends View implements View.OnTouchListener {
         this.board = board;
         // Trigger a redraw of the view when the board is updated
         invalidate();
+    }
+
+    public void setRound(Round inRound) {
+        this.round = inRound;
     }
 }
