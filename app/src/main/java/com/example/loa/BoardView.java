@@ -50,6 +50,8 @@ public class BoardView extends View implements View.OnTouchListener {
 
     private Move prevMove = null;
 
+    private boolean moveMade = false;
+
     private List<Move> validMoves = new ArrayList<>();
 
 
@@ -263,14 +265,19 @@ public class BoardView extends View implements View.OnTouchListener {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 // Touch down event
-                handleTouchDown(event);
+                if (!moveMade) {
+                    handleTouchDown(event);
+                }
+
                 break;
             case MotionEvent.ACTION_MOVE:
                 // Ignore move events after touch down
                 break;
             case MotionEvent.ACTION_UP:
                 // Touch up event
-                handleTouchUp(event);
+                if (!moveMade) {
+                    handleTouchUp(event);
+                }
                 break;
         }
 
@@ -337,6 +344,7 @@ public class BoardView extends View implements View.OnTouchListener {
                     prevMove = move;
                     validMoves.clear();
                     resetSuggestedMoveHighlight();
+                    moveMade = true;
                 }
             }
         } else {
@@ -436,4 +444,11 @@ public class BoardView extends View implements View.OnTouchListener {
         this.round = inRound;
     }
     public void setMoveStack(Stack<Move> inStack) { this.moveStack = inStack;};
+
+    public void setMoveMade(boolean inValue) {
+        moveMade = inValue;
+    }
+    public boolean getMoveMade() {
+        return moveMade;
+    }
 }

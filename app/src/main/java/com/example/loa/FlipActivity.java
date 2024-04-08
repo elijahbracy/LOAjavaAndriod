@@ -84,8 +84,8 @@ public class FlipActivity extends AppCompatActivity {
                         // Handle positive button click
                         dialog.dismiss(); // Close the dialog
                         Intent intent = new Intent(FlipActivity.this, GameActivity.class);
-                        intent.putExtra("flipResult", result);
-                        intent.putExtra("enterFlip", false );
+                        String resultExtra = result ? "win" : "lose";
+                        intent.putExtra("flipResult", resultExtra);
                         startActivity(intent);
                     }
                 });

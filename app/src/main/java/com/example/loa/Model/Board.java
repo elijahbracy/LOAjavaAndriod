@@ -26,6 +26,10 @@ public class Board {
         return numPieces;
     }
 
+    public boolean isGameOver() {
+        return countGroups('b') == 1 || countGroups('w') == 1;
+    }
+
     public boolean isWinningMove(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);

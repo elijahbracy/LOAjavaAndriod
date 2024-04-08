@@ -10,7 +10,6 @@ public class Player {
     private int score = 0;
     private int tournamentScore = 0;
     private int piecesOnBoard = 12;
-    private String name;
 
     public Player() {}
 
@@ -60,10 +59,6 @@ public class Player {
 
     public void play(Board board) {
         // Implementation of this method depends on the Board class
-    }
-
-    public void displayName() {
-        // Implementation of this method
     }
 
     public Pair<Move, String> strategize(Board board) {

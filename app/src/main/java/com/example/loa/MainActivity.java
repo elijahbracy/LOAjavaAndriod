@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     public void newGame(View v) {
         Intent intent = new Intent(this, GameActivity.class);
         // just handle load flag with intent, create or load objects in gameActivity
-        intent.putExtra("enterFlip", true);
+        intent.putExtra("enterFlip", "true");
         startActivity(intent);
     }
 
@@ -64,29 +64,85 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void promptForFileName() {
-        // Create an intent to open the file picker
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        // Filter to show only text files
-        intent.setType("*/*");
+        // Inflate the layout containing the Spinner view
+        View view = LayoutInflater.from(this).inflate(R.layout.spinner_dropdown, null);
+        fileNameSpinner = view.findViewById(R.id.fileSpinner);
 
-        // Start the activity to select a file
-        startActivityForResult(intent, 123);
+        // Create an AlertDialog.Builder
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose a File");
+        builder.setView(view);
+
+        // Set positive button
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Get the selected file URI from the Spinner
+                Uri selectedFileUri = getFileUriFromFileName(fileNameSpinner.getSelectedItem().toString());
+                // Perform further actions, such as loading the game
+                readFile(selectedFileUri);
+            }
+        });
+
+        // Set negative button
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Cancel dialog
+                dialog.dismiss();
+            }
+        });
+
+        // Create and show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Populate the Spinner with file names
+        List<String> fileNames = getFileNamesFromDirectory();
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, fileNames);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        fileNameSpinner.setAdapter(adapter);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    private List<String> getFileNamesFromDirectory() {
+        List<String> fileNames = new ArrayList<>();
+        // Get the directory path for downloads
+        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        //File downloadsDir = getExternalFilesDir(Environment.getExternalStorageDirectory().getPath());
 
-        if (requestCode == 123 && resultCode == RESULT_OK) {
-            if (data != null) {
-                // Get the URI of the selected file
-                Uri uri = data.getData();
-                Log.d("uri", String.valueOf(uri));
-                readFile(uri);
+        if (downloadsDir != null && downloadsDir.isDirectory()) {
+            // List files in the downloads directory
+            File[] files = downloadsDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    // Add file names to the list
+                    fileNames.add(file.getName());
+                }
             }
         }
+        return fileNames;
     }
+
+    private Uri getFileUriFromFileName(String fileName) {
+        // Get the directory path for downloads
+        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir != null && downloadsDir.isDirectory()) {
+            // List files in the downloads directory
+            File[] files = downloadsDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    // Check if the filename matches the selected filename
+                    if (file.getName().equals(fileName)) {
+                        // Return the URI of the matching file
+                        return Uri.fromFile(file);
+                    }
+                }
+            }
+        }
+        return null; // Return null if file not found
+    }
+
+
 
     public void readFile(Uri uri) {
         // Access the file content using the provided URI

@@ -12,6 +12,7 @@ import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.view.LayoutInflater;
@@ -60,15 +61,15 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
     private Round round;
 
-    private boolean enterFlip;
+    private String enterFlip;
+    private String flipResult;
 
     private Stack<Move> moveStack;
 
+    private boolean firstMove;
+
     private Move currentMove;
 
-    public boolean isHumanTurn;
-
-    private static final int WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 1001;
 
 
 
@@ -92,30 +93,31 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
         moveStack = new Stack<>();
 
-        initializeGame();
+        enterFlip = getIntent().getStringExtra("enterFlip");
 
-
-        enterFlip = getIntent().getBooleanExtra("enterFlip", false);
-
-        if (enterFlip) {
+        if (enterFlip != null) {
             Intent intent = new Intent(this, FlipActivity.class);
             startActivity(intent);
         }
 
-        isHumanTurn = getIntent().getBooleanExtra("flipResult", true);
+        flipResult = getIntent().getStringExtra("flipResult");
 
-        if (isHumanTurn) {
-            round.setCurPlayer(human);
-            human.setColor('b');
-            round.setNextPlayer(computer);
-            computer.setColor('w');
-        }
-        else {
-            round.setCurPlayer(computer);
-            computer.setColor('b');
-            round.setNextPlayer(human);
-            human.setColor('w');
-            computerMove();
+        initializeGame();
+
+        if (flipResult != null) {
+            if (flipResult.equals("win")) {
+                round.setCurPlayer(human);
+                human.setColor('b');
+                round.setNextPlayer(computer);
+                computer.setColor('w');
+            }
+            else if (flipResult.equals("lose")){
+                round.setCurPlayer(computer);
+                computer.setColor('b');
+                round.setNextPlayer(human);
+                human.setColor('w');
+                computerMove();
+            }
         }
 
         Log.d("gameBoard", Arrays.toString(board.getBoard()));
@@ -124,36 +126,94 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         boardView.setRound(round);
         boardView.setMoveStack(moveStack);
 
-        List<Move> possibleMoves = board.getPossibleMoves('b');
-        // Log the coordinates of each possible move
-        for (Move move : possibleMoves) {
-            Log.d("moves", "Move: " + move.toRankFileNotation());
-        }
-
-        //updateTurn();
     }
 
     public void help(View v) {
-        // Get the list of possible moves from your game logic
-        List<Move> possibleMoves = board.getPossibleMoves(human.getColor());
+        if (!boardView.getMoveMade()) {
+            // Get the list of possible moves from your game logic
+            List<Move> possibleMoves = board.getPossibleMoves(human.getColor());
 
-        // get best move and reason
-        Pair<Move, String>bestMoveReason = human.strategize(board);
+            // get best move and reason
+            Pair<Move, String>bestMoveReason = human.strategize(board);
 
-        // Build the help dialog with the list of possible moves
-        AlertDialog helpDialog = buildHelp(possibleMoves, bestMoveReason);
+            // Build the help dialog with the list of possible moves
+            AlertDialog helpDialog = buildHelp(possibleMoves, bestMoveReason);
 
-        // ask boardView to highlight suggestion
-        boardView.highlightBestMove(bestMoveReason.first);
+            // ask boardView to highlight suggestion
+            boardView.highlightBestMove(bestMoveReason.first);
 
-        // Show the dialog
-        helpDialog.show();
+            // Show the dialog
+            helpDialog.show();
+        } else {
+            // Show dialog box indicating that the user needs to undo the move first
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("First undo move to receive help")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // Close the dialog
+                            dialog.dismiss();
+                        }
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+
+    }
+
+    public String getRoundOverInfo() {
+        String info = "";
+        String winner;
+        int score;
+        if (board.countGroups(round.getCurPlayer().getColor()) == 1) {
+            if (round.getCurPlayer() instanceof Human) {
+                winner = "Human";
+                score = board.countPieces(human.getColor()) - board.countPieces(computer.getColor());
+            } else {
+                winner = "Computer";
+                score = board.countPieces(computer.getColor()) - board.countPieces(human.getColor());
+            }
+        } else {
+            if (round.getNextPlayer() instanceof Human) {
+                winner = "Human";
+                score = board.countPieces(human.getColor()) - board.countPieces(computer.getColor());
+            } else {
+                winner = "Computer";
+                score = board.countPieces(computer.getColor()) - board.countPieces(human.getColor());
+            }
+        }
+
+        info += "Round Over! Winner: " + winner + "\n";
+        info += winner + " scored " + score + "points.\n";
+
+        return info;
+    }
+
+    public void displayWinnerDialog() {
+
+
+        // Create a dialog indicating the winner
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(getRoundOverInfo())
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Dismiss the dialog box
+                        dialog.dismiss();
+                    }
+                });
+        // Create and show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     public void confirm(View v) {
-        if ((human.getColor() == 'b' && moveStack.size() % 2 != 0) ||
-                (human.getColor() == 'w' && moveStack.size() % 2 == 0)) {
+        // check for win
+        if (board.isGameOver()) {
+            displayWinnerDialog();
+        }
+        if ((firstMove && moveStack.size() % 2 != 0) ||
+                (!firstMove && moveStack.size() % 2 == 0)) {
             round.SwitchPlayers();
+            boardView.setMoveMade(false);
             computerMove();
         }
         else {
@@ -218,8 +278,8 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
     }
 
     public void undo(View v) {
-        if ((human.getColor() == 'b' && moveStack.size() % 2 != 0) ||
-                (human.getColor() == 'w' && moveStack.size() % 2 == 0)) {
+        if ((firstMove && moveStack.size() % 2 != 0) ||
+                (!firstMove && moveStack.size() % 2 == 0)) {
             // Undo the last move by popping it from the stack
             Move lastMove = moveStack.pop();
 
@@ -237,6 +297,9 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
             else {
                 boardView.setPrevMove(null);
             }
+
+            // set moveMade to false
+            boardView.setMoveMade(false);
 
 
             // Update the view to reflect the undone move
@@ -256,32 +319,96 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
     }
 
     public void quit(View v) {
+        if (!boardView.getMoveMade()) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Quit Game")
+                    .setMessage("Would you like to save the current game?")
+                    .setIcon(android.R.drawable.ic_media_pause)
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Prompt user to enter a filename
+                            promptForFileName();
+                        }
+                    })
+                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Go back to the main activity without saving
+                            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                            startActivity(intent);
+                        }
+                    })
+                    .setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Dismiss the dialog
+                        }
+                    })
+                    .show();
+        } else {
+            // Show dialog box indicating that the user needs to undo the move first
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("First undo move to quit game")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // Close the dialog
+                            dialog.dismiss();
+                        }
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+    }
+
+    public void displayInfo(View v) {
+        // Get the current round information (replace this with your actual logic)
+        String roundInfo = getCurrentRoundInfo();
+
+        // Create an AlertDialog.Builder
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Quit Game")
-                .setMessage("Would you like to save the current game?")
-                .setIcon(android.R.drawable.ic_media_pause)
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+
+        // Set dialog properties
+        builder.setTitle("Round Information")
+                .setMessage(roundInfo)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        // Prompt user to enter a filename
-                        promptForFileName();
+                        // Handle OK button click if needed
                     }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Go back to the main activity without saving
-                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                        startActivity(intent);
-                    }
-                })
-                .setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Dismiss the dialog
-                    }
-                })
-                .show();
+                });
+
+        // Create and show the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private String getCurrentRoundInfo() {
+        String info = "";
+        String curPlayer;
+        if (round.getCurPlayer() instanceof Human) {
+            curPlayer = "Human";
+        } else {
+            curPlayer = "Computer";
+        }
+
+        char curPlayerColorChar = round.getCurPlayer().getColor();
+        String curPlayerColor = String.valueOf(curPlayerColorChar);
+
+        info += "Current Player: " + curPlayer;
+        info += "(" + curPlayerColor + ")\n\n";
+        info += "Human:\n";
+        info += "Rounds won: " + human.getRoundsWon() + "\n";
+        Log.d("humanInfo", String.valueOf(human.getRoundsWon()));
+        info += "Current Round Score: " + (board.countPieces(human.getColor()) - board.countPieces(computer.getColor())) + "\n";
+        info += "Tournament Score: " + human.getScore() + "\n\n";
+        info += "Computer:\n";
+        info += "Rounds won: " + computer.getRoundsWon() + "\n";
+        Log.d("humanInfo", String.valueOf(computer.getRoundsWon()));
+        info += "Current Round Score: " + (board.countPieces(computer.getColor()) - board.countPieces(human.getColor())) + "\n";
+        info += "Tournament Score: " + computer.getScore();
+
+        return info;
     }
 
 
@@ -435,27 +562,26 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
         round.SwitchPlayers();
 
+        // Display dialog with computer's move and reason
+        displayComputerMoveDialog(computerMove, bestMoveReason.second);
+
         boardView.invalidate();
 
     }
 
-
-
-
-
-    /*
-    @Override
-    public void onMoveMade(boolean isHumanTurn) {
-        // Update the player turn text or any other data in the GameActivity
-        if (isHumanTurn) {
-            humanData.setTextColor(Color.GREEN);
-            computerData.setTextColor(Color.BLACK);
-        } else {
-            humanData.setTextColor(Color.BLACK);
-            computerData.setTextColor(Color.GREEN);
-        }
+    private void displayComputerMoveDialog(Move computerMove, String reason) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Computer's Move");
+        builder.setMessage(computerMove.toRankFileNotation() + "\n\nReason: " + reason)
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Close the dialog
+                        dialog.dismiss();
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
-     */
 
 
 
@@ -537,15 +663,23 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                     // Process human information
                     i++;
                     Log.d("humanInfo", String.valueOf(lines[i].charAt(12)));
-                    human.setRoundsWon((int)lines[i].charAt(12));
+                    char charValue = lines[i].charAt(12);
+                    int intValue = Character.getNumericValue(charValue);
+                    human.setRoundsWon(intValue);
                     i++;
-                    human.setRoundsWon((int)lines[i].charAt(7));
+                    charValue = lines[i].charAt(7);
+                    intValue = Character.getNumericValue(charValue);
+                    human.setScore(intValue);
                 } else if (lines[i].startsWith("Computer:")) {
                     // Process computer information
                     i++;
-                    computer.setRoundsWon((int)lines[i].charAt(12));
+                    char charValue = lines[i].charAt(12);
+                    int intValue = Character.getNumericValue(charValue);
+                    computer.setRoundsWon(intValue);
                     i++;
-                    computer.setRoundsWon((int)lines[i].charAt(7));
+                    charValue = lines[i].charAt(7);
+                    intValue = Character.getNumericValue(charValue);
+                    computer.setScore(intValue);
                 } else if (lines[i].startsWith("Next player:")) {
                     // Process next player information
                     String curPlayer = lines[i].substring(13);
@@ -553,9 +687,11 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                     if (curPlayer.equals("Human")) {
                         round.setCurPlayer(human);
                         round.setNextPlayer(computer);
+                        firstMove = true;
                     } else {
                         round.setCurPlayer(computer);
                         round.setNextPlayer(human);
+                        firstMove = false;
                     }
                     i++;
                     String color = lines[i].substring(7);
@@ -570,6 +706,15 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
             }
         } else {
             Log.d("load", "null");
+            //Intent intent = new Intent(GameActivity.this, FlipActivity.class);
+            //startActivity(intent);
+            if (flipResult != null) {
+                if (flipResult.equals("win")) {
+                    firstMove = true;
+                } else {
+                    firstMove = false;
+                }
+            }
         }
 
 
