@@ -11,15 +11,21 @@ import android.view.View;
 
 import com.example.loa.Model.Board;
 import com.example.loa.Model.Human;
+import com.example.loa.Model.Move;
 import com.example.loa.Model.Player;
 import com.example.loa.Model.Round;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Stack;
 
 public class BoardView extends View implements View.OnTouchListener {
 
     private Board board;
     private Round round;
+
+    private Stack<Move> moveStack;
 
     private OnMoveListener moveListener;
 
@@ -35,6 +41,16 @@ public class BoardView extends View implements View.OnTouchListener {
 
     private int movedRow = -1;
     private int movedCol = -1;
+
+    private int suggestedDestRow = -1;
+    private int suggestedDestCol = -1;
+
+    private int suggestedOriginRow = -1;
+    private int suggestedOriginCol = -1;
+
+    private Move prevMove = null;
+
+    private List<Move> validMoves = new ArrayList<>();
 
 
     public BoardView(Context context) {
@@ -114,9 +130,10 @@ public class BoardView extends View implements View.OnTouchListener {
             }
         }
 
-        // Draw highlighting for the selected square
+
+        // Draw highlighting for the selected piece
         if (selectedRow != -1 && selectedCol != -1) {
-            int highlightColor = Color.parseColor("#FFFF00"); // Yellow color for highlighting
+            int highlightColor = Color.parseColor("#eb4034"); // green color for highlighting
             int highlightLeft = left + selectedCol * cellWidth;
             int highlightTop = top + selectedRow * cellHeight;
             int highlightRight = highlightLeft + cellWidth;
@@ -124,10 +141,9 @@ public class BoardView extends View implements View.OnTouchListener {
             paint.setColor(highlightColor);
             canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
         }
-
-        // Draw highlighting for the place the piece moved to
+        /*
         if (movedRow != -1 && movedCol != -1) {
-            int lighterHighlightColor = Color.parseColor("#FFFF00"); // yellow color for highlighting
+            int lighterHighlightColor = Color.parseColor("#61e871"); // yellow color for highlighting
             int highlightLeft = left + movedCol * cellWidth;
             int highlightTop = top + movedRow * cellHeight;
             int highlightRight = highlightLeft + cellWidth;
@@ -135,6 +151,67 @@ public class BoardView extends View implements View.OnTouchListener {
             paint.setColor(lighterHighlightColor);
             canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
         }
+         */
+        if (prevMove != null) {
+            int lighterHighlightColor = Color.parseColor("#61e871"); // yellow color for highlighting
+            int prevMoveOriginRow = prevMove.getOriginRow();
+            int prevMoveOriginCol = prevMove.getOriginCol();
+            int prevMoveDestRow = prevMove.getDestinationRow();
+            int prevMoveDestCol = prevMove.getDestinationCol();
+
+            // Highlight the origin square of the previous move
+            int originHighlightLeft = left + prevMoveOriginCol * cellWidth;
+            int originHighlightTop = top + prevMoveOriginRow * cellHeight;
+            int originHighlightRight = originHighlightLeft + cellWidth;
+            int originHighlightBottom = originHighlightTop + cellHeight;
+            paint.setColor(lighterHighlightColor);
+            canvas.drawRect(originHighlightLeft, originHighlightTop, originHighlightRight, originHighlightBottom, paint);
+
+            // Highlight the destination square of the previous move
+            int destHighlightLeft = left + prevMoveDestCol * cellWidth;
+            int destHighlightTop = top + prevMoveDestRow * cellHeight;
+            int destHighlightRight = destHighlightLeft + cellWidth;
+            int destHighlightBottom = destHighlightTop + cellHeight;
+            canvas.drawRect(destHighlightLeft, destHighlightTop, destHighlightRight, destHighlightBottom, paint);
+        }
+
+        // Draw highlighting for the valid move destinations
+        for (Move move : validMoves) {
+            int destRow = move.getDestinationRow();
+            int destCol = move.getDestinationCol();
+            int highlightLeft = left + destCol * cellWidth;
+            int highlightTop = top + destRow * cellHeight;
+            int highlightRight = highlightLeft + cellWidth;
+            int highlightBottom = highlightTop + cellHeight;
+            paint.setColor(Color.parseColor("#eb4034")); // Change color as needed
+            canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
+        }
+
+
+        // Draw highlighting for the suggested move
+        if (suggestedOriginRow != -1 && suggestedOriginCol != -1) {
+            int lighterHighlightColor = Color.parseColor("#428af5");
+            int highlightLeft = left + suggestedOriginCol * cellWidth;
+            int highlightTop = top + suggestedOriginRow * cellHeight;
+            int highlightRight = highlightLeft + cellWidth;
+            int highlightBottom = highlightTop + cellHeight;
+            paint.setColor(lighterHighlightColor);
+            canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
+        }
+
+        if (suggestedDestRow != -1 && suggestedDestCol != -1) {
+            int lighterHighlightColor = Color.parseColor("#428af5");
+            int highlightLeft = left + suggestedDestCol * cellWidth;
+            int highlightTop = top + suggestedDestRow * cellHeight;
+            int highlightRight = highlightLeft + cellWidth;
+            int highlightBottom = highlightTop + cellHeight;
+            paint.setColor(lighterHighlightColor);
+            canvas.drawRect(highlightLeft, highlightTop, highlightRight, highlightBottom, paint);
+        }
+
+
+
+
 
 
         // Draw the pieces based on the board state
@@ -146,15 +223,12 @@ public class BoardView extends View implements View.OnTouchListener {
                     //Log.d("piecetype", String.valueOf(pieceType));
                     if (pieceType != 'x') {
                         // Draw the piece
-                        // You can use different shapes, colors, or bitmaps for different piece types
-                        // Example: drawing a circle for a piece
-                        paint.setColor(pieceType == 'W' ? Color.WHITE : Color.BLACK); // Assuming 'W' represents white and 'B' represents black
+                        paint.setColor(pieceType == 'w' ? Color.WHITE : Color.BLACK);
                         // Calculate the center coordinates of the cell
                         int cellLeft = left + col * cellWidth;
                         int cellTop = top + row * cellHeight;
                         int centerX = cellLeft + cellWidth / 2;
                         int centerY = cellTop + cellHeight / 2;
-                        // Assuming a radius for the piece
                         int radius = Math.min(cellWidth, cellHeight) / 2 - 10;
                         canvas.drawCircle(centerX, centerY, radius, paint);
                     }
@@ -216,6 +290,18 @@ public class BoardView extends View implements View.OnTouchListener {
 
         selectedRow = rowDown;
         selectedCol = colDown;
+
+        // Check if the touch coordinates are within the board bounds
+        if (rowDown >= 0 && rowDown < 8 && colDown >= 0 && colDown < 8) {
+            // Check if the selected position contains a piece of the current player's color
+            if (board.getBoard()[rowDown][colDown] == round.getCurPlayer().getColor()) {
+                resetSuggestedMoveHighlight();
+                addValidMoves(selectedRow, selectedCol);
+                invalidate();
+            }
+        } else {
+            Log.d("TouchEvent", "Touch down outside board bounds");
+        }
     }
 
     private void handleTouchUp(MotionEvent event) {
@@ -235,17 +321,22 @@ public class BoardView extends View implements View.OnTouchListener {
             // Check if a piece is selected and the touch up is at a valid position
             if (selectedRow != -1 && selectedCol != -1) {
                 Log.d("isValid", "SelectedRow: " + selectedRow + ", SelectedCol: " + selectedCol + ", RowUp: " + rowUp + ", ColUp: " + colUp);
-                if (board.isValid(selectedRow, selectedCol, rowUp, colUp, 'B')) {
-                    board.makeMove(selectedRow, selectedCol, rowUp, colUp, 'B');
+                if (board.isValid(selectedRow, selectedCol, rowUp, colUp, round.getCurPlayer().getColor())) {
+                    board.makeMove(selectedRow, selectedCol, rowUp, colUp, round.getCurPlayer().getColor());
                     // if move is valid updated moved coordinates for highlighting on redraw
                     movedRow = rowUp;
                     movedCol = colUp;
-                    round.SwitchPlayers();
-                    Log.d("turn", round.getCurPlayer().toString());
+                    //round.SwitchPlayers();
+                    //Log.d("turn", round.getCurPlayer().toString());
                     invalidate();
                     if (moveListener != null) {
                         moveListener.onMoveMade(round.getCurPlayer() instanceof Human);
                     }
+                    Move move = new Move(selectedRow, selectedCol, movedRow, movedCol);
+                    moveStack.push(move);
+                    prevMove = move;
+                    validMoves.clear();
+                    resetSuggestedMoveHighlight();
                 }
             }
         } else {
@@ -277,8 +368,66 @@ public class BoardView extends View implements View.OnTouchListener {
         canvas.drawText(text, x, y, paint);
     }
 
+    public void highlightBestMove(Move move) {
+        validMoves.clear();
+        resetMadeMoveHighlight();
+        // Set the coordinates of the origin of best move to highlight
+        suggestedOriginRow = move.getOriginRow();
+        suggestedOriginCol = move.getOriginCol();
+
+        // Set the coordinates of the destination of best move to highlight
+        suggestedDestRow = move.getDestinationRow();
+        suggestedDestCol = move.getDestinationCol();
+
+        // Invalidate the view to trigger redraw and highlight the best move
+        invalidate();
+    }
+
+    public void resetSuggestedMoveHighlight() {
+        suggestedOriginRow = -1;
+        suggestedOriginCol = -1;
+        suggestedDestRow = -1;
+        suggestedDestCol = -1;
+    }
+
+    public void resetMadeMoveHighlight() {
+        selectedRow = -1;
+        selectedCol = -1;
+        movedRow = -1;
+        movedCol = -1;
+    }
+
+
+
+    public void setPrevMove(Move move) {
+        prevMove = move;
+    }
+
+    // Method to add valid move positions for a selected piece
+    private void addValidMoves(int selectedRow, int selectedCol) {
+        // Get valid moves for the selected piece
+        List<Move> valid = board.getPossibleMoves(selectedRow, selectedCol, round.getCurPlayer().getColor());
+
+        // Log all valid moves
+        for (Move move : validMoves) {
+            Log.d("ValidMove", "From: " + selectedRow + ", " + selectedCol + " To: " + move.getDestinationRow() + ", " + move.getDestinationCol());
+        }
+
+        // Add valid moves to the list
+        validMoves.clear(); // Clear the list before adding new valid moves
+        validMoves.addAll(valid);
+    }
+
+
+
+
+
     public void setBoard(Board board) {
         this.board = board;
+
+        // push board to history
+        //boardHistory.push(board.getBoard());
+        Log.d("setBoard", Arrays.toString(board.getBoard()));
         // Trigger a redraw of the view when the board is updated
         invalidate();
     }
@@ -286,4 +435,5 @@ public class BoardView extends View implements View.OnTouchListener {
     public void setRound(Round inRound) {
         this.round = inRound;
     }
+    public void setMoveStack(Stack<Move> inStack) { this.moveStack = inStack;};
 }

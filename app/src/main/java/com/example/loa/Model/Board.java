@@ -10,24 +10,96 @@ public class Board {
     private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
     private static final char EMPTY = 'x';
 
-    public boolean isWinningMove(int originRow, int originCol, int destinationRow, int destinationCol, char curColor) {
+
+    public int countPieces(char color) {
+        // Iterate through board, if char is equal to color, increment num pieces
+        int numPieces = 0;
+
+        for (int i = 0; i < 8; ++i) {
+            for (int j = 0; j < 8; ++j) {
+                if (board[i][j] == color) {
+                    numPieces++;
+                }
+            }
+        }
+
+        return numPieces;
+    }
+
+    public boolean isWinningMove(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
-        buffBoard.makeMove(originRow, originCol, destinationRow, destinationCol, curColor);
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(curColor) == 1;
     }
 
-    public boolean isConnectingGroups(int originRow, int originCol, int destinationRow, int destinationCol, char curColor) {
+    public boolean isCapture(Move move, char curColor, char opponentColor) {
         Board buffBoard = new Board(this.board);
-        buffBoard.makeMove(originRow, originCol, destinationRow, destinationCol, curColor);
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+        return buffBoard.countPieces(opponentColor) < this.countPieces(opponentColor);
+    }
+
+    public boolean isStall(Move move, char curColor, char opponentColor) {
+        Board buffBoard = new Board(this.board);
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+        return buffBoard.countGroups(opponentColor) != 1;
+    }
+
+
+
+    public boolean isConnectingGroups(Move move, char curColor) {
+        Board buffBoard = new Board(this.board);
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(curColor) + 1 < countGroups(curColor);
     }
 
-    public boolean isThwart(int originRow, int originCol, int destinationRow, int destinationCol, char curColor, char opponentColor) {
+    public boolean isCondensingGroups(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
-        buffBoard.makeMove(originRow, originCol, destinationRow, destinationCol, curColor);
-        List<String> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
-        for (String oppMove : opponentMoves) {
-            if (true/*buffBoard.isWinningMove(oppMove, opponentColor)*/) {
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+        return buffBoard.countGroups(curColor) < countGroups(curColor);
+    }
+
+    public boolean isBlock(Move move, char curColor, char opponentColor) {
+        Board buffBoard = new Board(this.board);
+
+        int destRow = move.getDestinationRow();
+        int destCol = move.getDestinationCol();
+
+        // Check if the adjacent cell contains opponent's piece
+        if ((destCol == 1 || destCol == 6) && buffBoard.getBoard()[destRow][destCol + (destCol == 1 ? -1 : 1)] == opponentColor) {
+            buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+            List<Move> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
+
+            for (Move opponentMove : opponentMoves) {
+                if (buffBoard.isWinningMove(opponentMove, opponentColor)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        if ((destRow == 1 || destRow == 6) && buffBoard.getBoard()[destRow + (destRow == 1 ? -1 : 1)][destCol] == opponentColor) {
+            // Check if the adjacent cell contains opponent's piece
+            buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+            List<Move> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
+
+            for (Move opponentMove : opponentMoves) {
+                if (buffBoard.isWinningMove(opponentMove, opponentColor)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+
+    public boolean isThwart(Move move, char curColor, char opponentColor) {
+        Board buffBoard = new Board(this.board);
+        buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
+        List<Move> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
+        for (Move oppMove : opponentMoves) {
+            if (buffBoard.isWinningMove(oppMove, opponentColor)) {
                 return false;
             }
         }
@@ -107,14 +179,14 @@ public class Board {
 
     public void resetBoard() {
         char[][] defaultBoard = {
-                {'x', 'B', 'B', 'B', 'B', 'B', 'B', 'x'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'W', 'x', 'x', 'x', 'x', 'x', 'x', 'W'},
-                {'x', 'B', 'B', 'B', 'B', 'B', 'B', 'x'}
+                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'}
         };
 
         for (int i = 0; i < 8; i++) {
@@ -126,16 +198,15 @@ public class Board {
 
     // Define other constructors similarly
 
-    public List<String> getPossibleMoves(char curColor) {
-        List<String> possibleMoves = new ArrayList<>();
+    public List<Move> getPossibleMoves(char curColor) {
+        List<Move> possibleMoves = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (board[i][j] == curColor) {
                     for (int k = 0; k < 8; k++) {
                         for (int l = 0; l < 8; l++) {
-                            //String move = generateMoveString(i, j, k, l);
-                            if (isValid(i, j, j, k, curColor)) {
-                                //possibleMoves.add(move);
+                            if (isValid(i, j, k, l, curColor)) {
+                                possibleMoves.add(new Move(i, j, k, l));
                             }
                         }
                     }
@@ -144,6 +215,28 @@ public class Board {
         }
         return possibleMoves;
     }
+
+    public List<Move> getPossibleMoves(int row, int col, char curColor) {
+        List<Move> possibleMoves = new ArrayList<>();
+        // Ensure the specified row and column are within bounds
+        if (row < 0 || row >= 8 || col < 0 || col >= 8) {
+            return possibleMoves; // Return an empty list if the specified position is out of bounds
+        }
+        // Check if there is a piece at the specified position
+        if (board[row][col] == curColor) {
+            // Iterate over all possible destination positions
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    // Check if the move from the specified position to the destination position is valid
+                    if (isValid(row, col, i, j, curColor)) {
+                        possibleMoves.add(new Move(row, col, i, j)); // Add the valid move to the list
+                    }
+                }
+            }
+        }
+        return possibleMoves;
+    }
+
 
     // Define other methods similarly
 
@@ -296,9 +389,17 @@ public class Board {
         return numPieces;
     }
 
+    public void setBoard(char[][] newBoard) {
+        // Check if the dimensions of the new board are valid
+        if (newBoard.length != 8 || newBoard[0].length != 8) {
+            throw new IllegalArgumentException("Invalid board dimensions. Board must be 8x8.");
+        }
 
-
-
+        // Copy the contents of the new board to the current board
+        for (int i = 0; i < 8; i++) {
+            System.arraycopy(newBoard[i], 0, this.board[i], 0, 8);
+        }
+    }
 
 
     private String generateMoveString(int originRow, int originCol, int destinationRow, int destinationCol) {
