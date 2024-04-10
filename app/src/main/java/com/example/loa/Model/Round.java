@@ -1,53 +1,57 @@
 package com.example.loa.Model;
 
+/**
+ Represents a round of the game, keeping track of turns played and the current and next players.
+ */
 public class Round {
-    private int turnsPlayed = 0;
-    private Player curPlayer = null;
-    private Player nextPlayer = null;
+    private Player curPlayer = null; // Current player in the round
+    private Player nextPlayer = null; // Next player in the round
 
+    /**
+     Initializes a new instance of the Round class.
+     */
     public Round() {}
 
-    public void roundStart(Player p1, Player p2) {
-        // Implementation of this method depends on the Player class
-    }
-
-    public void Score(Player winner, int numOpponentPieces) {
-        // Implementation of this method depends on your requirements
-    }
-
+    /**
+     Switches the current player with the next player.
+     */
     public void SwitchPlayers() {
         Player buff = curPlayer;
         curPlayer = nextPlayer;
         nextPlayer = buff;
     }
 
-    public int getTurnsPlayed() {
-        return turnsPlayed;
-    }
-
-    public void setTurnsPlayed(int turnsPlayed) {
-        this.turnsPlayed = turnsPlayed;
-    }
-
-    public void announceRoundWin(Player curPlayer, Player nextPlayer) {
-        // Implementation of this method depends on your requirements
-    }
-
+    /**
+     Sets the current player.
+     @param curPlayer The current player to set.
+     */
     public void setCurPlayer(Player curPlayer) {
         this.curPlayer = curPlayer;
     }
 
+    /**
+     Gets the current player.
+     @return The current player.
+     */
     public Player getCurPlayer() {
         return curPlayer;
     }
 
+    /**
+     Sets the next player.
+     @param nextPlayer The next player to set.
+     */
     public void setNextPlayer(Player nextPlayer) {
         this.nextPlayer = nextPlayer;
     }
 
+    /**
+     Gets the next player.
+     @return The next player.
+     */
     public Player getNextPlayer() {
         return nextPlayer;
     }
-
 }
+
 

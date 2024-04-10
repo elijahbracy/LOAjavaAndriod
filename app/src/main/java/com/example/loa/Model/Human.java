@@ -1,6 +1,11 @@
 package com.example.loa.Model;
 
+/**
+ Represents a human player in the game.
+ */
 public class Human extends Player {
-    public Human() {};
-
+    /**
+     Initializes a new instance of the Human class.
+     */
+    public Human() {}
 }

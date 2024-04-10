@@ -1,32 +1,21 @@
 package com.example.loa;
 
-import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.util.Pair;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.view.LayoutInflater;
 import android.widget.Toast;
-import android.Manifest;
-
 
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -39,40 +28,35 @@ import com.example.loa.Model.Round;
 import com.example.loa.Model.Tournament;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
 
-public class GameActivity extends AppCompatActivity /*implements BoardView.OnMoveListener*/{
+/**
+ * The game activity of the application.
+ */
+public class GameActivity extends AppCompatActivity {
 
     private BoardView boardView;
-    private Tournament tournament;
-
     private Human human;
     private Computer computer;
     private Board board;
-
     private Round round;
-
     private String enterFlip;
     private String flipResult;
-
     private Stack<Move> moveStack;
-
     private boolean firstMove;
-
-    private Move currentMove;
-
+    private String gameState;
 
 
-
+    /**
+     Initializes the activity, sets up edge-to-edge display, and initializes the game board.
+     @param savedInstanceState A Bundle object containing the activity's previously saved state.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,24 +69,23 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         });
 
 
-
-
         boardView = findViewById(R.id.board_view);
-        //boardView.setOnMoveListener(this);
-
 
         moveStack = new Stack<>();
 
         enterFlip = getIntent().getStringExtra("enterFlip");
 
-        if (enterFlip != null) {
-            Intent intent = new Intent(this, FlipActivity.class);
-            startActivity(intent);
-        }
-
         flipResult = getIntent().getStringExtra("flipResult");
 
         initializeGame();
+
+        if (enterFlip != null) {
+            Intent intent = new Intent(this, FlipActivity.class);
+
+            intent.putExtra("fileContent", gameState);
+
+            startActivity(intent);
+        }
 
         if (flipResult != null) {
             if (flipResult.equals("win")) {
@@ -116,18 +99,22 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                 computer.setColor('b');
                 round.setNextPlayer(human);
                 human.setColor('w');
-                computerMove();
             }
         }
-
-        Log.d("gameBoard", Arrays.toString(board.getBoard()));
 
         boardView.setBoard(board);
         boardView.setRound(round);
         boardView.setMoveStack(moveStack);
 
+        if (round.getCurPlayer() instanceof Computer) {
+            computerMove();
+        }
     }
 
+    /**
+     Provides assistance to the player by suggesting a move and displaying possible moves.
+     @param v The View object that was clicked to trigger the help function.
+     */
     public void help(View v) {
         if (!boardView.getMoveMade()) {
             // Get the list of possible moves from your game logic
@@ -160,6 +147,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
     }
 
+    /**
+     Retrieves information about the result of the current round.
+     @return A string containing information about the round outcome and current standings.
+     */
     public String getRoundOverInfo() {
         String info = "";
         String winner;
@@ -168,47 +159,57 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
             if (round.getCurPlayer() instanceof Human) {
                 winner = "Human";
                 score = board.countPieces(human.getColor()) - board.countPieces(computer.getColor());
+                human.setScore(human.getScore() + score);
+                human.setRoundsWon(human.getRoundsWon() + 1);
             } else {
                 winner = "Computer";
                 score = board.countPieces(computer.getColor()) - board.countPieces(human.getColor());
+                computer.setScore(computer.getScore() + score);
+                computer.setRoundsWon(computer.getRoundsWon() + 1);
             }
         } else {
             if (round.getNextPlayer() instanceof Human) {
                 winner = "Human";
                 score = board.countPieces(human.getColor()) - board.countPieces(computer.getColor());
+                human.setScore(human.getScore() + score);
+                human.setRoundsWon(human.getRoundsWon() + 1);
             } else {
                 winner = "Computer";
                 score = board.countPieces(computer.getColor()) - board.countPieces(human.getColor());
+                computer.setScore(computer.getScore() + score);
+                computer.setRoundsWon(computer.getRoundsWon() + 1);
             }
         }
 
-        info += "Round Over! Winner: " + winner + "\n";
-        info += winner + " scored " + score + "points.\n";
+        info += winner + " won the round!\n";
+        if (score == 1) {
+            info += winner + " scored " + score + " point.\n\n";
+        } else {
+            info += winner + " scored " + score + " points.\n\n";
+        }
+
+        info += "Current Standings:\n\n";
+        info += "Human:\n";
+        info += "Rounds won: " + human.getRoundsWon() + "\n";
+        info += "Current Tournament Score: " + human.getScore() + "\n\n";
+        info += "Computer:\n";
+        info += "Rounds won: " + computer.getRoundsWon() + "\n";
+        info += "Current Tournament Score: " + computer.getScore();
+
+
 
         return info;
     }
 
-    public void displayWinnerDialog() {
-
-
-        // Create a dialog indicating the winner
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(getRoundOverInfo())
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // Dismiss the dialog box
-                        dialog.dismiss();
-                    }
-                });
-        // Create and show the dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
+    /**
+     Confirms the move made by the player and switches players if necessary. Displays a dialog if no move has been made.
+     @param v The View object that was clicked to trigger the confirm function.
+     */
     public void confirm(View v) {
         // check for win
         if (board.isGameOver()) {
             displayWinnerDialog();
+            return;
         }
         if ((firstMove && moveStack.size() % 2 != 0) ||
                 (!firstMove && moveStack.size() % 2 == 0)) {
@@ -233,6 +234,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
     }
 
+    /**
+     Displays a dialog showing the move log of the game.
+     @param v The View object that was clicked to trigger the showLog function.
+     */
     public void showLog(View v) {
         // Create a StringBuilder to build the message content
         StringBuilder message = new StringBuilder("Move Log:\n");
@@ -277,6 +282,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         alertDialog.show();
     }
 
+    /**
+     Undoes the last move made by the player if possible, updating the game state accordingly.
+     @param v The View object that was clicked to trigger the undo function.
+     */
     public void undo(View v) {
         if ((firstMove && moveStack.size() % 2 != 0) ||
                 (!firstMove && moveStack.size() % 2 == 0)) {
@@ -304,7 +313,7 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
             // Update the view to reflect the undone move
             boardView.setBoard(board);
-            boardView.resetMadeMoveHighlight();;
+            boardView.resetSelectedTile();;
             boardView.invalidate();
 
         } else {
@@ -318,6 +327,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         }
     }
 
+    /**
+     Quits the game, prompting the player to save the current game state if no move is in progress.
+     @param v The View object that was clicked to trigger the quit function.
+     */
     public void quit(View v) {
         if (!boardView.getMoveMade()) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -349,7 +362,7 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         } else {
             // Show dialog box indicating that the user needs to undo the move first
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setMessage("First undo move to quit game")
+            builder.setMessage("First confirm or undo move in progress to quit game")
                     .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
                             // Close the dialog
@@ -361,6 +374,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         }
     }
 
+    /**
+     Displays the current round information in an AlertDialog.
+     @param v The View object that was clicked to trigger the displayInfo function.
+     */
     public void displayInfo(View v) {
         // Get the current round information (replace this with your actual logic)
         String roundInfo = getCurrentRoundInfo();
@@ -383,6 +400,104 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         dialog.show();
     }
 
+    /**
+     Displays a dialog box showing the winner of the round and offers options to play again or exit the game.
+     */
+    public void displayWinnerDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Round Results");
+        builder.setMessage(getRoundOverInfo())
+                .setCancelable(false)
+                .setPositiveButton("Play Again", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Dismiss the dialog box
+                        dialog.dismiss();
+                        // Add code here to start a new round or game
+                        startNewRoundOrGame();
+                    }
+                })
+                .setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // Create a dialog to display tournament results
+                        AlertDialog.Builder resultDialogBuilder = new AlertDialog.Builder(GameActivity.this);
+                        resultDialogBuilder.setTitle("Tournament Results");
+
+                        // Append tournament results to the dialog message
+                        StringBuilder results = new StringBuilder();
+                        results.append("Human Rounds Won: ").append(human.getRoundsWon()).append("\n");
+                        results.append("Human Score: ").append(human.getScore()).append("\n");
+                        results.append("\nComputer Rounds Won: ").append(computer.getRoundsWon()).append("\n");
+                        results.append("Computer Score: ").append(computer.getScore()).append("\n");
+                        resultDialogBuilder.setMessage(results.toString())
+                                .setCancelable(false);
+
+                        // Add OK button to dismiss the dialog
+                        resultDialogBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                dialog.dismiss();
+                                finish(); // Exit the game or activity
+                            }
+                        });
+
+                        // Show the result dialog
+                        AlertDialog resultDialog = resultDialogBuilder.create();
+                        resultDialog.show();
+                    }
+                });
+
+        // Create and show the dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    /**
+     Starts a new round or game, resetting the board and updating player states.
+     */
+    private void startNewRoundOrGame() {
+        String content = "";
+
+        // Reset the board for a new game
+        board.resetBoard();
+
+        // Append board state to content
+        content += "Board:\n";
+        char[][] boardState = board.getBoard();
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                content += boardState[i][j] + " ";
+            }
+            content += "\n";
+        }
+        content += "\n";
+
+        // Append human player state to content
+        content += "Human:\n";
+        content += "Rounds won: " + human.getRoundsWon() + "\n";
+        content += "Score: " + human.getScore() + "\n\n";
+
+        // Append computer player state to content
+        content += "Computer:\n";
+        content += "Rounds won: " + computer.getRoundsWon() + "\n";
+        content += "Score: " + computer.getScore() + "\n\n";
+
+        // Append next player and color to content
+        content += "Next player: " + (human.getRoundsWon() > computer.getRoundsWon() ? "Human" : "Computer") + "\n";
+        content += "Color: " + "Black" + "\n";
+
+        Intent intent = new Intent(this, GameActivity.class);
+        intent.putExtra("fileContent", content);
+        Log.d("startNewRoundOrGame", "File content: " + content);
+        if (human.getRoundsWon() == computer.getRoundsWon()) {
+            intent.putExtra("enterFlip", "true");
+        }
+        startActivity(intent);
+
+    }
+
+    /**
+     Retrieves and returns information about the current round.
+     @return A string containing information about the current round.
+     */
     private String getCurrentRoundInfo() {
         String info = "";
         String curPlayer;
@@ -396,23 +511,25 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         String curPlayerColor = String.valueOf(curPlayerColorChar);
 
         info += "Current Player: " + curPlayer;
-        info += "(" + curPlayerColor + ")\n\n";
+        info += " (" + curPlayerColor + ")\n\n";
         info += "Human:\n";
         info += "Rounds won: " + human.getRoundsWon() + "\n";
         Log.d("humanInfo", String.valueOf(human.getRoundsWon()));
         info += "Current Round Score: " + (board.countPieces(human.getColor()) - board.countPieces(computer.getColor())) + "\n";
-        info += "Tournament Score: " + human.getScore() + "\n\n";
+        info += "Current Tournament Score: " + human.getScore() + "\n\n";
         info += "Computer:\n";
         info += "Rounds won: " + computer.getRoundsWon() + "\n";
         Log.d("humanInfo", String.valueOf(computer.getRoundsWon()));
         info += "Current Round Score: " + (board.countPieces(computer.getColor()) - board.countPieces(human.getColor())) + "\n";
-        info += "Tournament Score: " + computer.getScore();
+        info += "Current Tournament Score: " + computer.getScore();
 
         return info;
     }
 
 
-
+    /**
+     Prompts the user to enter a filename for saving the game state.
+     */
     private void promptForFileName() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = getLayoutInflater();
@@ -430,7 +547,7 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
 
                         // Perform validation
                         if (isValidFileName(fileName)) {
-                            saveGameToFile("filename.txt"); // ADD confimation
+                            saveGameToFile(fileName); // ADD confimation
 
                             Intent intent = new Intent(GameActivity.this,MainActivity.class);
                             startActivity(intent);
@@ -450,7 +567,11 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         editText.requestFocus();
     }
 
-    // Function to validate filename
+    /**
+     Validates a filename to ensure it contains only alphanumeric characters, underscores, and periods.
+     @param fileName The filename to be validated.
+     @return true if the filename is valid, false otherwise.
+     */
     private boolean isValidFileName(String fileName) {
         // Regular expression to match valid filename characters
         String regex = "^[a-zA-Z0-9_.]+$";
@@ -458,6 +579,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         return fileName.matches(regex);
     }
 
+    /**
+     Saves the current game state to a file with the specified filename.
+     @param filename The filename to save the game state to.
+     */
     public void saveGameToFile(String filename) {
         // Create a StringBuilder to construct the content of the file
         StringBuilder content = new StringBuilder();
@@ -511,11 +636,8 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
             osw.close();
             fos.close();
 
-            new AlertDialog.Builder(this)
-                    .setTitle("Success")
-                    .setMessage("File write successful..")
-                    .setPositiveButton("OK", null)
-                    .show();
+            // Display a toast indicating success
+            Toast.makeText(this, "File write successful.", Toast.LENGTH_SHORT).show();
 
             Log.d("FilePath", "Saved file path: " + file.getAbsolutePath());
 
@@ -524,7 +646,10 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         }
     }
 
-
+    /**
+     Loads a game state from the specified file.
+     @param filename The filename from which to load the game state.
+     */
     public void loadGameFromFile(String filename) {
         // Create a File object representing the file to be read
         File file = new File(this.getExternalFilesDir(null), filename);
@@ -541,50 +666,82 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
     }
 
 
-
+    /**
+     Initiates the computer's move by strategizing the best move, making it on the board, and updating the UI.
+     */
     public void computerMove() {
         Pair<Move, String> bestMoveReason = computer.strategize(board);
 
         Move computerMove = bestMoveReason.first;
+
+        // Display dialog with computer's move and reason
+        displayComputerMoveDialog(computerMove, bestMoveReason.second );
+
         board.makeMove(computerMove.getOriginRow(),
-                        computerMove.getOriginCol(),
-                        computerMove.getDestinationRow(),
-                        computerMove.getDestinationCol(),
-                        computer.getColor());
+                computerMove.getOriginCol(),
+                computerMove.getDestinationRow(),
+                computerMove.getDestinationCol(),
+                computer.getColor());
 
         boardView.setBoard(board);
 
-        boardView.setPrevMove(bestMoveReason.first);
+        boardView.setPrevMove(computerMove);
 
-        boardView.resetMadeMoveHighlight();
+        boardView.resetSelectedTile();
 
-        moveStack.push(bestMoveReason.first);
+        moveStack.push(computerMove);
 
         round.SwitchPlayers();
 
-        // Display dialog with computer's move and reason
-        displayComputerMoveDialog(computerMove, bestMoveReason.second);
+        // Check for win after the computer makes its move
+        if (board.isGameOver()) {
+            displayWinnerDialog();
+            return;
+        }
 
         boardView.invalidate();
-
     }
 
+    /**
+     Displays a dialog showing the computer's move and the reason behind it.
+     @param computerMove The move made by the computer.
+     @param reason The reason behind the move.
+     */
     private void displayComputerMoveDialog(Move computerMove, String reason) {
+        List<Move> possibleMoves = board.getPossibleMoves(computer.getColor());
+
+        StringBuilder message = new StringBuilder();
+        message.append(computerMove.toRankFileNotation()).append("\n\nReason: ").append(reason);
+
+        // Append all possible moves to the message content
+        message.append("\n\nPossible Moves:\n");
+        for (Move move : possibleMoves) {
+            message.append(move.toRankFileNotation()).append("\n");
+        }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Computer's Move");
-        builder.setMessage(computerMove.toRankFileNotation() + "\n\nReason: " + reason)
+        builder.setTitle("Computer's Move")
+                .setMessage(message.toString())
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // Close the dialog
                         dialog.dismiss();
                     }
                 });
+
         AlertDialog dialog = builder.create();
         dialog.show();
     }
 
 
 
+
+    /**
+     Builds an AlertDialog to display the list of possible moves and the suggested move.
+     @param possibleMoves The list of possible moves.
+     @param moveAndReason The suggested move and its reason.
+     @return The built AlertDialog.
+     */
     public AlertDialog buildHelp(List<Move> possibleMoves, Pair<Move, String> moveAndReason) {
         // Create AlertDialog.Builder
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -619,17 +776,20 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
         return builder.create();
     }
 
-
+    /**
+     Initializes the game by creating instances of players, round, and board, and loads the game state if provided.
+     */
     public void initializeGame() {
-
+        // Create instances of human, computer, round, and board
         human = new Human();
         computer = new Computer();
         round = new Round();
         board = new Board();
 
+        // Get the game state from intent extras
+        gameState = getIntent().getStringExtra("fileContent");
 
-
-        String gameState = getIntent().getStringExtra("fileContent");
+        // If game state is provided, load the game state
         if (gameState != null) {
             // Split the gameState into separate lines
             String[] lines = gameState.split("\n");
@@ -641,19 +801,21 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                     // Process board information
                     Log.d("BoardInfo", "Board information found");
 
-                    // Process the next 8 lines (assuming each line represents a row)
+                    // Process the next 8 lines
                     for (int j = i + 1; j < i + 9; j++) {
                         if (j < lines.length) {
-                            String row = lines[j].trim(); // Trim leading/trailing whitespace
-                            Log.d("BoardRow", row); // Log each row of the board
-                            for (int k = 0; k < 8; k++) { // Iterate over columns
-                                inBoard[j - (i + 1)][k] = row.charAt(k * 2); // Adjust index to skip spaces
+                            // Trim leading/trailing whitespace
+                            String row = lines[j].trim();
+                            // Iterate over columns
+                            for (int k = 0; k < 8; k++) {
+                                // Adjust index to skip spaces
+                                inBoard[j - (i + 1)][k] = row.charAt(k * 2);
                                 Log.d("rowInfo", "board[" + (j - (i + 1)) + "][" + k + "]=" + String.valueOf(row.charAt(k*2)));
                             }
                             board.setBoard(inBoard);
                         } else {
-                            Log.d("BoardInfo", "Incomplete board information"); // Log if there are insufficient lines
-                            break; // Exit the loop if there are not enough lines for the board
+                            // Exit the loop if there are not enough lines for the board
+                            break;
                         }
                     }
 
@@ -662,7 +824,6 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                 } else if (lines[i].startsWith("Human:")) {
                     // Process human information
                     i++;
-                    Log.d("humanInfo", String.valueOf(lines[i].charAt(12)));
                     char charValue = lines[i].charAt(12);
                     int intValue = Character.getNumericValue(charValue);
                     human.setRoundsWon(intValue);
@@ -683,7 +844,6 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                 } else if (lines[i].startsWith("Next player:")) {
                     // Process next player information
                     String curPlayer = lines[i].substring(13);
-                    Log.d("nextplayer", curPlayer);
                     if (curPlayer.equals("Human")) {
                         round.setCurPlayer(human);
                         round.setNextPlayer(computer);
@@ -705,18 +865,11 @@ public class GameActivity extends AppCompatActivity /*implements BoardView.OnMov
                 }
             }
         } else {
-            Log.d("load", "null");
-            //Intent intent = new Intent(GameActivity.this, FlipActivity.class);
-            //startActivity(intent);
+            // If game state is not provided, set the first move based on flip result
             if (flipResult != null) {
-                if (flipResult.equals("win")) {
-                    firstMove = true;
-                } else {
-                    firstMove = false;
-                }
+                firstMove = flipResult.equals("win");
             }
         }
-
-
     }
+
 }

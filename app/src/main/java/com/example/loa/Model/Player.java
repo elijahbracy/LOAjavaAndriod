@@ -4,70 +4,77 @@ import android.util.Pair;
 
 import java.util.List;
 
+/**
+ * Represents a player in the game.
+ */
 public class Player {
     private char color;
     private int roundsWon = 0;
     private int score = 0;
-    private int tournamentScore = 0;
-    private int piecesOnBoard = 12;
 
+    /**
+     * Default constructor.
+     */
     public Player() {}
 
+    /**
+     * Sets the color of the player.
+     * @param color The color of the player ('w' for white, 'b' for black).
+     */
     public void setColor(char color) {
         this.color = color;
     }
 
+    /**
+     * Gets the color of the player.
+     * @return The color of the player.
+     */
     public char getColor() {
         return color;
     }
 
+    /**
+     * Sets the number of rounds won by the player.
+     * @param roundsWon The number of rounds won.
+     */
     public void setRoundsWon(int roundsWon) {
         this.roundsWon = roundsWon;
     }
 
+    /**
+     * Gets the number of rounds won by the player.
+     * @return The number of rounds won.
+     */
     public int getRoundsWon() {
         return roundsWon;
     }
 
+    /**
+     * Sets the score of the player.
+     * @param score The score of the player.
+     */
     public void setScore(int score) {
         this.score = score;
     }
 
+    /**
+     * Gets the score of the player.
+     * @return The score of the player.
+     */
     public int getScore() {
         return score;
     }
 
-    public void setTournamentScore(int tournamentScore) {
-        this.tournamentScore = tournamentScore;
-    }
-
-    public int getTournamentScore() {
-        return tournamentScore;
-    }
-
-    public void setPiecesOnBoard(int piecesOnBoard) {
-        this.piecesOnBoard = piecesOnBoard;
-    }
-
-    public int getPiecesOnBoard() {
-        return piecesOnBoard;
-    }
-
-    public void updateNumPieces(Board board) {
-        this.setPiecesOnBoard(board.countPieces(this.getColor()));
-    }
-
-    public void play(Board board) {
-        // Implementation of this method depends on the Board class
-    }
-
+    /**
+     * Strategy to determine the move the player should make based on the current state of the board.
+     * @param board The board object representing the current state of the game.
+     * @return A pair containing the move to make and the reason for making that move.
+     */
     public Pair<Move, String> strategize(Board board) {
         Move moveToMake = null;
         String reason = "";
 
         List<Move> moves = board.getPossibleMoves(this.getColor());
-        //Collections.sort(moves); // Assuming Move class implements Comparable
-
 
         char opponentColor = (this.getColor() == 'w') ? 'b' : 'w';
 
@@ -176,7 +183,7 @@ public class Player {
         for (Move move : moves) {
             if (board.isStall(move, this.getColor(), opponentColor)) {
                 moveToMake = move;
-                reason = " to stall defeat.\n";
+                reason = " for lack of a better strategy.\n";
                 return new Pair<>(moveToMake, reason);
             }
         }
@@ -184,4 +191,3 @@ public class Player {
         return new Pair<>(moveToMake, reason);
     }
 }
-

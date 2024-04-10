@@ -5,14 +5,68 @@ import android.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents the game board.
+ */
 public class Board {
     private char[][] board = new char[8][8];
-    private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-    private static final char EMPTY = 'x';
 
+    /**
+     * Constructs a new Board object with the provided board configuration.
+     *
+     * @param board The 2D char array representing the initial board configuration.
+     */
+    public Board(char[][] board) {
+        for (int i = 0; i < 8; i++) {
+            System.arraycopy(board[i], 0, this.board[i], 0, 8);
+        }
+    }
 
+    /**
+     * Constructs a new Board object with the default initial board configuration.
+     */
+    public Board() {
+        resetBoard();
+    }
+
+    /**
+     * Retrieves the current state of the board.
+     *
+     * @return The 2D char array representing the current board configuration.
+     */
+    public char[][] getBoard() {
+        return board;
+    }
+
+    /**
+     * Resets the board to the default initial configuration.
+     */
+    public void resetBoard() {
+        char[][] defaultBoard = {
+                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
+                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'}
+        };
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                board[i][j] = defaultBoard[i][j];
+            }
+        }
+    }
+
+    /**
+     * Counts the number of pieces of the specified color on the board.
+     *
+     * @param color The color of the pieces to count.
+     * @return The number of pieces of the specified color on the board.
+     */
     public int countPieces(char color) {
-        // Iterate through board, if char is equal to color, increment num pieces
         int numPieces = 0;
 
         for (int i = 0; i < 8; ++i) {
@@ -26,49 +80,96 @@ public class Board {
         return numPieces;
     }
 
+    /**
+     * Checks if the game is over.
+     *
+     * @return true if the game is over, false otherwise.
+     */
     public boolean isGameOver() {
         return countGroups('b') == 1 || countGroups('w') == 1;
     }
 
+    /**
+     * Checks if the specified move results in a winning move for the player of the specified color.
+     *
+     * @param move     The move to check.
+     * @param curColor The color of the player making the move.
+     * @return true if the move results in a winning move, false otherwise.
+     */
     public boolean isWinningMove(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(curColor) == 1;
     }
 
+    /**
+     * Checks if the specified move results in capturing opponent's pieces.
+     *
+     * @param move          The move to check.
+     * @param curColor      The color of the player making the move.
+     * @param opponentColor The color of the opponent.
+     * @return true if the move results in capturing opponent's pieces, false otherwise.
+     */
     public boolean isCapture(Move move, char curColor, char opponentColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countPieces(opponentColor) < this.countPieces(opponentColor);
     }
 
+    /**
+     * Checks if the specified move results in stalling the opponent's win.
+     *
+     * @param move          The move to check.
+     * @param curColor      The color of the player making the move.
+     * @param opponentColor The color of the opponent.
+     * @return true if the move results in stalling the opponent's win, false otherwise.
+     */
     public boolean isStall(Move move, char curColor, char opponentColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(opponentColor) != 1;
     }
 
-
-
+    /**
+     * Checks if the specified move results in connecting groups of the player.
+     *
+     * @param move     The move to check.
+     * @param curColor The color of the player making the move.
+     * @return true if the move results in connecting groups, false otherwise.
+     */
     public boolean isConnectingGroups(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(curColor) + 1 < countGroups(curColor);
     }
 
+    /**
+     * Checks if the specified move results in condensing groups of the player.
+     *
+     * @param move     The move to check.
+     * @param curColor The color of the player making the move.
+     * @return true if the move results in condensing groups, false otherwise.
+     */
     public boolean isCondensingGroups(Move move, char curColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
         return buffBoard.countGroups(curColor) < countGroups(curColor);
     }
 
+    /**
+     * Checks if the specified move results in blocking opponent's pieces.
+     *
+     * @param move          The move to check.
+     * @param curColor      The color of the player making the move.
+     * @param opponentColor The color of the opponent.
+     * @return true if the move results in blocking opponent's pieces, false otherwise.
+     */
     public boolean isBlock(Move move, char curColor, char opponentColor) {
         Board buffBoard = new Board(this.board);
 
         int destRow = move.getDestinationRow();
         int destCol = move.getDestinationCol();
 
-        // Check if the adjacent cell contains opponent's piece
         if ((destCol == 1 || destCol == 6) && buffBoard.getBoard()[destRow][destCol + (destCol == 1 ? -1 : 1)] == opponentColor) {
             buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
             List<Move> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
@@ -82,7 +183,6 @@ public class Board {
         }
 
         if ((destRow == 1 || destRow == 6) && buffBoard.getBoard()[destRow + (destRow == 1 ? -1 : 1)][destCol] == opponentColor) {
-            // Check if the adjacent cell contains opponent's piece
             buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
             List<Move> opponentMoves = buffBoard.getPossibleMoves(opponentColor);
 
@@ -97,7 +197,14 @@ public class Board {
         return false;
     }
 
-
+    /**
+     * Checks if the specified move results in thwarting the opponent's winning move.
+     *
+     * @param move          The move to check.
+     * @param curColor      The color of the player making the move.
+     * @param opponentColor The color of the opponent.
+     * @return true if the move thwarts the opponent's winning move, false otherwise.
+     */
     public boolean isThwart(Move move, char curColor, char opponentColor) {
         Board buffBoard = new Board(this.board);
         buffBoard.makeMove(move.getOriginRow(), move.getOriginCol(), move.getDestinationRow(), move.getDestinationCol(), curColor);
@@ -110,7 +217,12 @@ public class Board {
         return true;
     }
 
-
+    /**
+     * Counts the number of groups of pieces of the specified color on the board.
+     *
+     * @param color The color of the pieces to count the groups for.
+     * @return The number of groups of pieces of the specified color on the board.
+     */
     public int countGroups(char color) {
         int groups = 0;
         boolean[][] visited = new boolean[8][8];
@@ -125,10 +237,17 @@ public class Board {
                 }
             }
         }
-        // System.out.println("number of groups for " + color + ": " + groups);
         return groups;
     }
 
+    /**
+     * Performs flood fill algorithm to mark all connected pieces of the same color.
+     *
+     * @param row     The row index of the starting position.
+     * @param col     The column index of the starting position.
+     * @param color   The color of the pieces.
+     * @param visited 2D array to mark visited positions.
+     */
     public void floodFill(int row, int col, char color, boolean[][] visited) {
         // if space is out of bounds, piece is not the same as color, or space has been visited, return
         if (row < 0 || row >= 8 || col < 0 || col >= 8 || board[row][col] != color || visited[row][col]) {
@@ -149,11 +268,18 @@ public class Board {
         floodFill(row - 1, col - 1, color, visited);
     }
 
-
-
+    /**
+     * Updates the board with the specified move.
+     *
+     * @param originRow      The row index of the piece's origin position.
+     * @param originCol      The column index of the piece's origin position.
+     * @param destinationRow The row index of the piece's destination position.
+     * @param destinationCol The column index of the piece's destination position.
+     * @param curColor       The color of the piece making the move.
+     */
     public void makeMove(int originRow, int originCol, int destinationRow, int destinationCol, char curColor) {
         // Update origin space
-        board[originRow][originCol] = EMPTY;
+        board[originRow][originCol] = 'x';
 
         // Update destination space
         // If destination space is empty, just make the move
@@ -163,45 +289,12 @@ public class Board {
         // Note: You might need to implement a method to track the number of pieces for each player
     }
 
-
-    // Define other methods similarly
-
-    public Board(char[][] board) {
-        for (int i = 0; i < 8; i++) {
-            System.arraycopy(board[i], 0, this.board[i], 0, 8);
-        }
-    }
-
-    public Board() {
-        //board = new char[8][8];
-        resetBoard();
-    }
-
-    public char[][] getBoard() {
-        return board;
-    }
-
-    public void resetBoard() {
-        char[][] defaultBoard = {
-                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'w', 'x', 'x', 'x', 'x', 'x', 'x', 'w'},
-                {'x', 'b', 'b', 'b', 'b', 'b', 'b', 'x'}
-        };
-
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                board[i][j] = defaultBoard[i][j];
-            }
-        }
-    }
-
-    // Define other constructors similarly
-
+    /**
+     * Retrieves a list of possible moves for the specified color.
+     *
+     * @param curColor The color of the player for whom to generate possible moves.
+     * @return A list of possible Move objects.
+     */
     public List<Move> getPossibleMoves(char curColor) {
         List<Move> possibleMoves = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
@@ -220,6 +313,14 @@ public class Board {
         return possibleMoves;
     }
 
+    /**
+     * Retrieves a list of possible moves for the piece at the specified position and color.
+     *
+     * @param row      The row index of the piece.
+     * @param col      The column index of the piece.
+     * @param curColor The color of the player for whom to generate possible moves.
+     * @return A list of possible Move objects.
+     */
     public List<Move> getPossibleMoves(int row, int col, char curColor) {
         List<Move> possibleMoves = new ArrayList<>();
         // Ensure the specified row and column are within bounds
@@ -241,9 +342,16 @@ public class Board {
         return possibleMoves;
     }
 
-
-    // Define other methods similarly
-
+    /**
+     * Checks if a move from the origin to the destination coordinates is valid for the specified color.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @param curColor       The color of the player making the move.
+     * @return true if the move is valid, false otherwise.
+     */
     public boolean isValid(int originRow, int originCol, int destinationRow, int destinationCol, char curColor) {
 
         // Get the pieces at the origin and destination coordinates
@@ -278,6 +386,15 @@ public class Board {
         return true;
     }
 
+    /**
+     * Calculates the number of spaces to move from the origin to the destination coordinates.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @return The number of spaces to move.
+     */
     public int spacesToMove(int originRow, int originCol, int destinationRow, int destinationCol) {
         int rowDiff = Math.abs(originRow - destinationRow);
         int colDiff = Math.abs(originCol - destinationCol);
@@ -285,6 +402,16 @@ public class Board {
         return Math.max(rowDiff, colDiff);
     }
 
+    /**
+     * Checks if there are any pieces in the way between the origin and destination coordinates.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @param curColor       The color of the player making the move.
+     * @return true if there are pieces in the way, false otherwise.
+     */
     public boolean piecesInWay(int originRow, int originCol, int destinationRow, int destinationCol, char curColor) {
         // Get difference in row and col coordinates
         int rowDiff = Math.abs(originRow - destinationRow);
@@ -329,13 +456,30 @@ public class Board {
         return false;
     }
 
+    /**
+     * Calculates the slope between two coordinates.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @return A Pair object representing the slope, with the first element being the row step and the second element being the column step.
+     */
     private Pair<Integer, Integer> slope(int originRow, int originCol, int destinationRow, int destinationCol) {
         int rowStep = (destinationRow - originRow) / spacesToMove(originRow, originCol, destinationRow, destinationCol);
         int colStep = (destinationCol - originCol) / spacesToMove(originRow, originCol, destinationRow, destinationCol);
         return new Pair<>(rowStep, colStep);
     }
 
-
+    /**
+     * Calculates the number of pieces on the line between two coordinates.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @return The number of pieces on the line between the two coordinates.
+     */
     private int piecesOnLine(int originRow, int originCol, int destinationRow, int destinationCol) {
         int numPieces = 0;
 
@@ -393,6 +537,12 @@ public class Board {
         return numPieces;
     }
 
+    /**
+     * Sets the current board configuration to the specified new board.
+     *
+     * @param newBoard The new board configuration to set.
+     * @throws IllegalArgumentException if the dimensions of the new board are not 8x8.
+     */
     public void setBoard(char[][] newBoard) {
         // Check if the dimensions of the new board are valid
         if (newBoard.length != 8 || newBoard[0].length != 8) {
@@ -405,7 +555,15 @@ public class Board {
         }
     }
 
-
+    /**
+     * Generates a string representation of a move.
+     *
+     * @param originRow      The row index of the origin coordinate.
+     * @param originCol      The column index of the origin coordinate.
+     * @param destinationRow The row index of the destination coordinate.
+     * @param destinationCol The column index of the destination coordinate.
+     * @return The string representation of the move.
+     */
     private String generateMoveString(int originRow, int originCol, int destinationRow, int destinationCol) {
         char originColChar = (char) ('A' + originCol);
         char destColChar = (char) ('A' + destinationCol);
@@ -413,4 +571,5 @@ public class Board {
         int destRowNum = Math.abs(destinationRow - 8) + 1;
         return "" + originColChar + originRowNum + "->" + destColChar + destRowNum;
     }
+
 }
